@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Shift - 認証</title>
+    <style>
+        :root {
+            --primary: #4FC3F7;
+            --primary-dark: #29B6F6;
+            --success: #4CAF50;
+            --error: #f44336;
+            --warning: #ff9800;
+            --text: #333;
+            --text-light: #666;
+            --border: #e0e0e0;
+            --background: #f5f5f5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            max-width: 440px;
+            width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        h1 {
+            color: var(--text);
+            font-size: 28px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        /* ローディング */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* フォーム要素 */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 40px 12px 12px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.1);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 4px;
+        }
+
+        .toggle-password:hover {
+            color: var(--text);
+        }
+
+        /* ボタン */
+        .button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 195, 247, 0.3);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .button-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .button-secondary:hover {
+            background: var(--background);
+        }
+
+        /* メッセージ */
+        .message {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            text-align: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .warning-message {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        /* アイコン */
+        .icon-large {
+            font-size: 64px;
+            margin-bottom: 24px;
+            display: block;
+            text-align: center;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 480px) {
+            .container {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+
+        /* エラーメッセージ */
+        .error-text {
+            color: var(--error);
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .error-text.show {
+            display: block;
+        }
+
+        /* リンク */
+        .link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <h1>Store Shift</h1>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p class="subtitle">処理中...</p>
+        </div>
+
+        <div id="content">
+            <!-- 動的コンテンツ -->
+        </div>
+    </div>
+
+    <script>
+        // Supabase設定
+        const SUPABASE_URL = 'https://tetjzixfmrhahzwebqcb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRldGp6aXhmbXJoYWh6d2VicWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNTM2ODcsImV4cCI6MjA2MzYyOTY4N30.uW390nPLRcOaSkBpO9ZxGJEUZRBXZYp3w-Cj8Gc-biM';
+
+        // URLパラメータ解析
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const errorCode = hashParams.get('error_code');
+        const errorDescription = hashParams.get('error_description');
+
+        // 初期化
+        window.addEventListener('DOMContentLoaded', () => {
+            if (errorCode) {
+                showError(errorDescription || 'エラーが発生しました');
+            } else if (type === 'recovery' && accessToken) {
+                showPasswordResetForm();
+            } else if (type === 'signup' && accessToken) {
+                confirmEmail();
+            } else if (type === 'invite' && accessToken) {
+                acceptInvite();
+            } else {
+                showDefaultMessage();
+            }
+        });
+
+        // パスワードリセットフォーム
+        function showPasswordResetForm() {
+            document.getElementById('content').innerHTML = `
+                <p class="subtitle">新しいパスワードを設定してください</p>
+
+                <form id="resetForm">
+                    <div class="form-group">
+                        <label for="password">新しいパスワード</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                required
+                                minlength="6"
+                                placeholder="6文字以上で入力"
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('password')">
+                                👁
+                            </button>
+                        </div>
+                        <div class="error-text" id="passwordError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">パスワード確認</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                required
+                                minlength="6"
+                                placeholder="同じパスワードを再入力"
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">
+                                👁
+                            </button>
+                        </div>
+                        <div class="error-text" id="confirmError"></div>
+                    </div>
+
+                    <button type="submit" class="button">パスワードを更新</button>
+                </form>
+            `;
+
+            document.getElementById('resetForm').addEventListener('submit', handlePasswordReset);
+        }
+
+        // パスワードリセット処理
+        async function handlePasswordReset(e) {
+            e.preventDefault();
+
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // バリデーション
+            let hasError = false;
+
+            if (password.length < 6) {
+                document.getElementById('passwordError').textContent = 'パスワードは6文字以上で入力してください';
+                document.getElementById('passwordError').classList.add('show');
+                hasError = true;
+            } else {
+                document.getElementById('passwordError').classList.remove('show');
+            }
+
+            if (password !== confirmPassword) {
+                document.getElementById('confirmError').textContent = 'パスワードが一致しません';
+                document.getElementById('confirmError').classList.add('show');
+                hasError = true;
+            } else {
+                document.getElementById('confirmError').classList.remove('show');
+            }
+
+            if (hasError) return;
+
+            // ローディング表示
+            showLoading();
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        password: password
+                    })
+                });
+
+                if (response.ok) {
+                    showSuccess('パスワードが更新されました！', 'アプリでログインしてください。');
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.msg || 'パスワードの更新に失敗しました');
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // メール確認処理
+        async function confirmEmail() {
+            showLoading();
+
+            try {
+                // Supabaseは自動的にトークンを検証
+                showSuccess('メール確認完了！', 'メールアドレスが確認されました。アプリでログインしてください。');
+            } catch (error) {
+                showError('メール確認に失敗しました');
+            }
+        }
+
+        // 招待受諾（将来実装）
+        function acceptInvite() {
+            showSuccess('招待を受諾しました', 'グループに参加しました。アプリでご確認ください。');
+        }
+
+        // デフォルトメッセージ
+        function showDefaultMessage() {
+            document.getElementById('content').innerHTML = `
+                <div class="message warning-message">
+                    <span class="icon-large">⚠️</span>
+                    <h2>無効なリンク</h2>
+                    <p>このリンクは無効か、有効期限が切れています。</p>
+                </div>
+                <a href="#" class="button button-secondary" onclick="openApp()">
+                    Store Shiftアプリを開く
+                </a>
+            `;
+        }
+
+        // 成功表示
+        function showSuccess(title, message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').innerHTML = `
+                <div class="message success-message">
+                    <span class="icon-large">✅</span>
+                    <h2>${title}</h2>
+                    <p>${message}</p>
+                </div>
+                <a href="#" class="button" onclick="openApp()">
+                    Store Shiftアプリを開く
+                </a>
+            `;
+        }
+
+        // エラー表示
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').innerHTML = `
+                <div class="message error-message">
+                    <span class="icon-large">❌</span>
+                    <h2>エラー</h2>
+                    <p>${message}</p>
+                </div>
+                <button class="button button-secondary" onclick="location.reload()">
+                    もう一度試す
+                </button>
+                <div class="footer-link">
+                    <a href="#" class="link" onclick="openApp()">Store Shiftアプリを開く</a>
+                </div>
+            `;
+        }
+
+        // ローディング表示
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+        }
+
+        // パスワード表示切り替え
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+
+        // アプリを開く（将来実装）
+        function openApp() {
+            // iOS/Android判定してストアに誘導
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+            if (/android/i.test(userAgent)) {
+                window.location.href = 'https://play.google.com/store/apps/details?id=com.posi.shift_posi';
+            } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                window.location.href = 'https://apps.apple.com/app/store-shift/id1234567890';
+            } else {
+                alert('モバイルデバイスでアプリをダウンロードしてください');
+            }
+        }
+    </script>
+</body>
+</html>
