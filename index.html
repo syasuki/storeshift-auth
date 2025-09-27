@@ -284,22 +284,40 @@
         const SUPABASE_URL = 'https://tetjzixfmrhahzwebqcb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRldGp6aXhmbXJoYWh6d2VicWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNTM2ODcsImV4cCI6MjA2MzYyOTY4N30.uW390nPLRcOaSkBpO9ZxGJEUZRBXZYp3w-Cj8Gc-biM';
 
-        // URLパラメータ解析
+        // URLパラメータ解析（クエリパラメータとハッシュ両方に対応）
+        const queryParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const type = hashParams.get('type');
+
+        // Supabaseの新形式（/auth/confirm）に対応
+        const tokenHash = queryParams.get('token_hash');
+        const type = queryParams.get('type') || hashParams.get('type');
+        const next = queryParams.get('next');
+
+        // 従来形式のパラメータ
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        const errorCode = hashParams.get('error_code');
-        const errorDescription = hashParams.get('error_description');
+        const errorCode = queryParams.get('error_code') || hashParams.get('error_code');
+        const errorDescription = queryParams.get('error_description') || hashParams.get('error_description');
 
         // 初期化
         window.addEventListener('DOMContentLoaded', () => {
+            console.log('URL params:', { tokenHash, type, next, accessToken, errorCode });
+
             if (errorCode) {
                 showError(errorDescription || 'エラーが発生しました');
-            } else if (type === 'recovery' && accessToken) {
-                showPasswordResetForm();
-            } else if (type === 'signup' && accessToken) {
-                confirmEmail();
+            } else if (type === 'recovery' && (tokenHash || accessToken)) {
+                // 新形式（token_hash）または従来形式（access_token）に対応
+                if (tokenHash) {
+                    handleSupabaseConfirm();
+                } else {
+                    showPasswordResetForm();
+                }
+            } else if (type === 'signup' && (tokenHash || accessToken)) {
+                if (tokenHash) {
+                    handleSupabaseConfirm();
+                } else {
+                    confirmEmail();
+                }
             } else if (type === 'invite' && accessToken) {
                 acceptInvite();
             } else {
@@ -420,6 +438,153 @@
                 showSuccess('メール確認完了！', 'メールアドレスが確認されました。アプリでログインしてください。');
             } catch (error) {
                 showError('メール確認に失敗しました');
+            }
+        }
+
+        // Supabaseの新形式確認処理
+        async function handleSupabaseConfirm() {
+            showLoading();
+
+            try {
+                // Supabaseのverify APIを呼び出し
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({
+                        token_hash: tokenHash,
+                        type: type
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Verification successful:', data);
+
+                    if (type === 'recovery') {
+                        // パスワードリセット成功後、パスワード更新フォームを表示
+                        showPasswordResetFormWithToken(data.access_token);
+                    } else if (type === 'signup') {
+                        // メール確認成功
+                        showSuccess('メール確認完了！', 'メールアドレスが確認されました。アプリでログインしてください。');
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.msg || '確認に失敗しました');
+                }
+            } catch (error) {
+                console.error('Verification failed:', error);
+                showError('確認処理に失敗しました: ' + error.message);
+            }
+        }
+
+        // トークン付きパスワードリセットフォーム
+        function showPasswordResetFormWithToken(accessToken) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').innerHTML = `
+                <p class="subtitle">新しいパスワードを設定してください</p>
+
+                <form id="resetForm">
+                    <div class="form-group">
+                        <label for="password">新しいパスワード</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                required
+                                minlength="6"
+                                placeholder="6文字以上で入力"
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('password')">
+                                👁
+                            </button>
+                        </div>
+                        <div class="error-text" id="passwordError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">パスワード確認</label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                required
+                                minlength="6"
+                                placeholder="同じパスワードを再入力"
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">
+                                👁
+                            </button>
+                        </div>
+                        <div class="error-text" id="confirmError"></div>
+                    </div>
+
+                    <button type="submit" class="button">パスワードを更新</button>
+                </form>
+            `;
+            document.getElementById('content').style.display = 'block';
+
+            // フォーム送信処理
+            document.getElementById('resetForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await updatePasswordWithToken(accessToken);
+            });
+        }
+
+        // トークンを使用してパスワード更新
+        async function updatePasswordWithToken(accessToken) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // バリデーション
+            let hasError = false;
+
+            if (password.length < 6) {
+                document.getElementById('passwordError').textContent = 'パスワードは6文字以上で入力してください';
+                document.getElementById('passwordError').classList.add('show');
+                hasError = true;
+            } else {
+                document.getElementById('passwordError').classList.remove('show');
+            }
+
+            if (password !== confirmPassword) {
+                document.getElementById('confirmError').textContent = 'パスワードが一致しません';
+                document.getElementById('confirmError').classList.add('show');
+                hasError = true;
+            } else {
+                document.getElementById('confirmError').classList.remove('show');
+            }
+
+            if (hasError) return;
+
+            // ローディング表示
+            showLoading();
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        password: password
+                    })
+                });
+
+                if (response.ok) {
+                    showSuccess('パスワード更新完了！', 'パスワードが正常に更新されました。アプリでログインしてください。');
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.msg || 'パスワードの更新に失敗しました');
+                }
+            } catch (error) {
+                showError(error.message);
             }
         }
 
