@@ -302,6 +302,26 @@
         // 初期化
         window.addEventListener('DOMContentLoaded', () => {
             console.log('URL params:', { tokenHash, type, next, accessToken, errorCode });
+            console.log('Full URL:', window.location.href);
+            console.log('Referrer:', document.referrer);
+
+            // Supabaseからのリダイレクト後の処理
+            const urlParams = new URLSearchParams(window.location.search);
+            const isFromSupabaseRedirect = urlParams.has('verified') || document.referrer.includes('supabase.co');
+
+            // デバッグ情報を画面上部に表示（開発時のみ）
+            if (window.location.hostname.includes('vercel.app')) {
+                const debugInfo = document.createElement('div');
+                debugInfo.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#333;color:#fff;padding:10px;font-size:12px;z-index:9999;';
+                debugInfo.innerHTML = `
+                    <strong>Debug:</strong>
+                    Referrer: ${document.referrer} |
+                    Params: ${window.location.search} |
+                    Hash: ${window.location.hash}
+                    <button onclick="this.parentElement.remove()" style="float:right;background:#666;color:#fff;border:none;padding:2px 8px;">×</button>
+                `;
+                document.body.appendChild(debugInfo);
+            }
 
             if (errorCode) {
                 showError(errorDescription || 'エラーが発生しました');
@@ -320,8 +340,31 @@
                 }
             } else if (type === 'invite' && accessToken) {
                 acceptInvite();
+            } else if (isFromSupabaseRedirect || urlParams.get('message') === 'signup_confirmed') {
+                // Supabaseからのリダイレクト後、またはクエリパラメータで確認
+                showSuccess(
+                    'アカウント有効化完了！',
+                    'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
+                );
+            } else if (document.referrer && document.referrer.includes('supabase.co')) {
+                // Supabaseからのリダイレクトを検出
+                console.log('Detected Supabase referrer:', document.referrer);
+                showSuccess(
+                    'アカウント有効化完了！',
+                    'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
+                );
             } else {
-                showDefaultMessage();
+                // パラメータもリファラーもない場合はローカルストレージをチェック
+                const lastAction = localStorage.getItem('lastAuthAction');
+                if (lastAction === 'signup_verification') {
+                    localStorage.removeItem('lastAuthAction');
+                    showSuccess(
+                        'アカウント有効化完了！',
+                        'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
+                    );
+                } else {
+                    showDefaultMessage();
+                }
             }
         });
 
@@ -429,13 +472,16 @@
             }
         }
 
-        // メール確認処理
+        // メール確認処理（従来形式）
         async function confirmEmail() {
             showLoading();
 
             try {
-                // Supabaseは自動的にトークンを検証
-                showSuccess('メール確認完了！', 'メールアドレスが確認されました。アプリでログインしてください。');
+                // 従来形式の場合（access_tokenが直接提供される）
+                showSuccess(
+                    'アカウント有効化完了！',
+                    'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
+                );
             } catch (error) {
                 showError('メール確認に失敗しました');
             }
@@ -468,7 +514,10 @@
                         showPasswordResetFormWithToken(data.access_token);
                     } else if (type === 'signup') {
                         // メール確認成功
-                        showSuccess('メール確認完了！', 'メールアドレスが確認されました。アプリでログインしてください。');
+                        showSuccess(
+                            'アカウント有効化完了！',
+                            'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
+                        );
                     }
                 } else {
                     const error = await response.json();
@@ -652,17 +701,29 @@
             field.type = field.type === 'password' ? 'text' : 'password';
         }
 
-        // アプリを開く（将来実装）
+        // アプリを開く
         function openApp() {
-            // iOS/Android判定してストアに誘導
+            // iOS/Android判定
             const userAgent = navigator.userAgent || navigator.vendor || window.opera;
 
             if (/android/i.test(userAgent)) {
-                window.location.href = 'https://play.google.com/store/apps/details?id=com.posi.shift_posi';
+                // Androidの場合
+                // アプリがインストールされていればアプリを開く、なければPlay Storeへ
+                try {
+                    window.location.href = 'intent://shift_posi#Intent;scheme=app;package=com.posi.shift_posi;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.posi.shift_posi;end';
+                } catch (e) {
+                    window.location.href = 'https://play.google.com/store/apps/details?id=com.posi.shift_posi';
+                }
             } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                window.location.href = 'https://apps.apple.com/app/store-shift/id1234567890';
+                // iOSの場合
+                // アプリがインストールされていればアプリを開く、なければApp Storeへ
+                window.location.href = 'storeshift://open';
+                setTimeout(() => {
+                    window.location.href = 'https://apps.apple.com/app/store-shift/id1234567890';
+                }, 2000);
             } else {
-                alert('モバイルデバイスでアプリをダウンロードしてください');
+                // デスクトップの場合
+                alert('Store ShiftはモバイルアプリApp です。スマートフォンでQRコードをスキャンしてダウンロードしてください。');
             }
         }
     </script>
