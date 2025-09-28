@@ -305,9 +305,16 @@
             console.log('Full URL:', window.location.href);
             console.log('Referrer:', document.referrer);
 
-            // Supabaseからのリダイレクト後の処理
+            // Supabaseがサインアップ確認後にredirect_toパラメータで戻ってくる場合の検出
+            const urlPath = window.location.pathname;
             const urlParams = new URLSearchParams(window.location.search);
-            const isFromSupabaseRedirect = urlParams.has('verified') || document.referrer.includes('supabase.co');
+            const isDirectAccess = urlPath === '/' && !window.location.search && !window.location.hash;
+
+            // Supabaseからのリダイレクトを検出するための複数の方法
+            const isFromSupabase =
+                document.referrer.includes('supabase.co') ||
+                document.referrer.includes('supabase.com') ||
+                sessionStorage.getItem('supabase_redirect') === 'true';
 
             // デバッグ情報を画面上部に表示（開発時のみ）
             if (window.location.hostname.includes('vercel.app')) {
@@ -317,7 +324,9 @@
                     <strong>Debug:</strong>
                     Referrer: ${document.referrer} |
                     Params: ${window.location.search} |
-                    Hash: ${window.location.hash}
+                    Hash: ${window.location.hash} |
+                    Direct: ${isDirectAccess} |
+                    FromSupabase: ${isFromSupabase}
                     <button onclick="this.parentElement.remove()" style="float:right;background:#666;color:#fff;border:none;padding:2px 8px;">×</button>
                 `;
                 document.body.appendChild(debugInfo);
@@ -326,13 +335,14 @@
             if (errorCode) {
                 showError(errorDescription || 'エラーが発生しました');
             } else if (type === 'recovery' && (tokenHash || accessToken)) {
-                // 新形式（token_hash）または従来形式（access_token）に対応
+                // パスワードリセット処理
                 if (tokenHash) {
                     handleSupabaseConfirm();
                 } else {
                     showPasswordResetForm();
                 }
             } else if (type === 'signup' && (tokenHash || accessToken)) {
+                // サインアップメール確認処理
                 if (tokenHash) {
                     handleSupabaseConfirm();
                 } else {
@@ -340,31 +350,16 @@
                 }
             } else if (type === 'invite' && accessToken) {
                 acceptInvite();
-            } else if (isFromSupabaseRedirect || urlParams.get('message') === 'signup_confirmed') {
-                // Supabaseからのリダイレクト後、またはクエリパラメータで確認
-                showSuccess(
-                    'アカウント有効化完了！',
-                    'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
-                );
-            } else if (document.referrer && document.referrer.includes('supabase.co')) {
-                // Supabaseからのリダイレクトを検出
-                console.log('Detected Supabase referrer:', document.referrer);
+            } else if (isDirectAccess && isFromSupabase) {
+                // Supabaseからの単純なリダイレクト（パラメータなし）の場合
+                // これがサインアップ確認後のパターン
+                sessionStorage.removeItem('supabase_redirect');
                 showSuccess(
                     'アカウント有効化完了！',
                     'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
                 );
             } else {
-                // パラメータもリファラーもない場合はローカルストレージをチェック
-                const lastAction = localStorage.getItem('lastAuthAction');
-                if (lastAction === 'signup_verification') {
-                    localStorage.removeItem('lastAuthAction');
-                    showSuccess(
-                        'アカウント有効化完了！',
-                        'メールアドレスが確認されました。Store Shiftアプリを開いて、作成したアカウントでログインしてください。'
-                    );
-                } else {
-                    showDefaultMessage();
-                }
+                showDefaultMessage();
             }
         });
 
@@ -490,6 +485,11 @@
         // Supabaseの新形式確認処理
         async function handleSupabaseConfirm() {
             showLoading();
+
+            // サインアップ確認の場合、リダイレクト後に検出できるようにフラグを設定
+            if (type === 'signup') {
+                sessionStorage.setItem('supabase_redirect', 'true');
+            }
 
             try {
                 // Supabaseのverify APIを呼び出し
