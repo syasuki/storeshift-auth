@@ -132,15 +132,6 @@ export async function handleSignupConfirmation() {
         }
         // PKCE認証フローの成功（code パラメータ）
         else if (params.code) {
-            const { error } = await supabase.auth.exchangeCodeForSession(params.code);
-
-            if (error) {
-                console.error('Code exchange error:', error);
-                if (error.message.includes('expired') || error.message.includes('invalid')) {
-                    throw new Error('確認コードの有効期限が切れているか無効です。もう一度サインアップしてください。');
-                }
-                throw error;
-            }
 
             // 確認成功 - アプリに戻るボタンと成功メッセージを表示
             showSuccessWithAppLink();
