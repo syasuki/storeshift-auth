@@ -218,7 +218,59 @@ export async function handlePasswordReset() {
         return;
     }
 
-    // パスワード再設定フォーム表示
+    // token_hashがある場合は先に検証して、成功したらフォーム表示
+    if (params.tokenHash) {
+        showLoading('認証を確認中...');
+        try {
+            // まず token_hash を検証
+            const { data, error } = await supabase.auth.verifyOtp({
+                token_hash: params.tokenHash,
+                type: 'recovery'
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            // 検証成功後、フォーム表示
+            showPasswordResetForm();
+        } catch (error) {
+            console.error('Token verification error:', error);
+            showMessage('error',
+                'リンクエラー',
+                'このリンクは無効または期限切れです。もう一度パスワードリセットをお試しください。'
+            );
+        }
+    }
+    // アクセストークンがある場合（従来形式）
+    else if (params.accessToken) {
+        showLoading('認証を確認中...');
+        try {
+            const { error } = await supabase.auth.setSession({
+                access_token: params.accessToken,
+                refresh_token: params.refreshToken
+            });
+
+            if (error) throw error;
+
+            showPasswordResetForm();
+        } catch (error) {
+            console.error('Session error:', error);
+            showMessage('error',
+                'リンクエラー',
+                'このリンクは無効または期限切れです。もう一度パスワードリセットをお試しください。'
+            );
+        }
+    } else {
+        showMessage('error',
+            'リンクエラー',
+            '有効な認証トークンが見つかりません。メールのリンクからアクセスしてください。'
+        );
+    }
+}
+
+// パスワードリセットフォーム表示
+function showPasswordResetForm() {
     hideLoading();
     const form = document.getElementById('resetPasswordForm');
     if (form) {
@@ -230,55 +282,36 @@ export async function handlePasswordReset() {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
+            // エラーをクリア
+            document.getElementById('passwordError').classList.remove('show');
+            document.getElementById('confirmPasswordError').classList.remove('show');
+
             // バリデーション
-            if (password !== confirmPassword) {
-                document.getElementById('confirmPasswordError').textContent = 'パスワードが一致しません';
-                document.getElementById('confirmPasswordError').classList.add('show');
-                return;
-            }
+            let hasError = false;
 
             if (password.length < 6) {
                 document.getElementById('passwordError').textContent = 'パスワードは6文字以上で入力してください';
                 document.getElementById('passwordError').classList.add('show');
-                return;
+                hasError = true;
             }
+
+            if (password !== confirmPassword) {
+                document.getElementById('confirmPasswordError').textContent = 'パスワードが一致しません';
+                document.getElementById('confirmPasswordError').classList.add('show');
+                hasError = true;
+            }
+
+            if (hasError) return;
 
             showLoading('パスワードを更新中...');
 
             try {
-                // トークンハッシュがある場合（新形式）
-                if (params.tokenHash) {
-                    const { error } = await supabase.auth.verifyOtp({
-                        token_hash: params.tokenHash,
-                        type: 'recovery'
-                    });
+                // セッションが既に確立されているはずなので、直接更新
+                const { error: updateError } = await supabase.auth.updateUser({
+                    password: password
+                });
 
-                    if (error) throw error;
-
-                    // パスワード更新
-                    const { error: updateError } = await supabase.auth.updateUser({
-                        password: password
-                    });
-
-                    if (updateError) throw updateError;
-                }
-                // アクセストークンがある場合（従来形式）
-                else if (params.accessToken) {
-                    const { error } = await supabase.auth.setSession({
-                        access_token: params.accessToken,
-                        refresh_token: params.refreshToken
-                    });
-
-                    if (error) throw error;
-
-                    const { error: updateError } = await supabase.auth.updateUser({
-                        password: password
-                    });
-
-                    if (updateError) throw updateError;
-                } else {
-                    throw new Error('有効な認証トークンが見つかりません');
-                }
+                if (updateError) throw updateError;
 
                 showMessage('success',
                     'パスワード更新完了',
