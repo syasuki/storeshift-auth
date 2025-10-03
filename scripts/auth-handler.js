@@ -62,6 +62,7 @@ function getUrlParams() {
     return {
         // クエリパラメータ
         tokenHash: queryParams.get('token_hash'),
+        token: queryParams.get('token'), // 古い形式のtoken
         type: queryParams.get('type') || hashParams.get('type'),
         next: queryParams.get('next'),
         errorCode: queryParams.get('error_code') || hashParams.get('error_code'),
@@ -103,6 +104,24 @@ export async function handleSignupConfirmation() {
                 console.error('OTP verification error:', error);
                 if (error.message.includes('expired')) {
                     throw new Error('確認リンクの有効期限が切れています。もう一度サインアップしてください。');
+                }
+                throw error;
+            }
+
+            // 確認成功 - アプリに戻るボタンと成功メッセージを表示
+            showSuccessWithAppLink();
+        }
+        // 古い形式のtoken（Supabaseの旧認証システム）
+        else if (params.token) {
+            const { error } = await supabase.auth.verifyOtp({
+                token: params.token,
+                type: params.type || 'signup'
+            });
+
+            if (error) {
+                console.error('OTP verification error:', error);
+                if (error.message.includes('expired') || error.message.includes('invalid')) {
+                    throw new Error('確認リンクの有効期限が切れているか無効です。もう一度サインアップしてください。');
                 }
                 throw error;
             }
