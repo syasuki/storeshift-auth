@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Shift - 認証処理</title>
+    <link rel="stylesheet" href="/styles/auth.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <h1>Store Shift</h1>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p class="subtitle">認証処理中...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- 動的コンテンツ -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { handleAuthCallback } from '/scripts/auth-handler.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            handleAuthCallback();
+        });
+    </script>
+</body>
+</html>

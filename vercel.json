@@ -1,0 +1,50 @@
+{
+  "rewrites": [
+    {
+      "source": "/auth/confirm",
+      "destination": "/auth/confirm.html"
+    },
+    {
+      "source": "/auth/reset-password",
+      "destination": "/auth/reset-password.html"
+    },
+    {
+      "source": "/auth/invite",
+      "destination": "/auth/invite.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/auth/callback.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/auth",
+      "destination": "/auth/callback",
+      "permanent": false
+    }
+  ]
+}

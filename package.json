@@ -1,0 +1,24 @@
+{
+  "name": "storeshift-auth-pages",
+  "version": "1.0.0",
+  "description": "Authentication pages for Store Shift app",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve .",
+    "test": "echo \"No tests specified\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/storeshift-auth.git"
+  },
+  "keywords": [
+    "authentication",
+    "supabase",
+    "storeshift"
+  ],
+  "author": "Store Shift Team",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

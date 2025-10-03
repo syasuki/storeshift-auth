@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Shift</title>
+    <link rel="stylesheet" href="/styles/auth.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📱</div>
+        <h1>Store Shift</h1>
+        <p class="subtitle">シフト管理を簡単に</p>
+
+        <div class="message">
+            <p style="text-align: center; color: var(--text-light);">
+                このページは認証処理用のランディングページです。<br>
+                アプリからアクセスしてください。
+            </p>
+        </div>
+
+        <div class="footer-link">
+            <p style="font-size: 12px; color: var(--text-light);">
+                © 2024 Store Shift. All rights reserved.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // URLパラメータをチェックして適切なページにリダイレクト
+        const queryParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+        const type = queryParams.get('type') || hashParams.get('type');
+        const tokenHash = queryParams.get('token_hash');
+        const accessToken = hashParams.get('access_token');
+
+        // 認証パラメータがある場合はコールバックページにリダイレクト
+        if (type || tokenHash || accessToken) {
+            window.location.href = `/auth/callback${window.location.search}${window.location.hash}`;
+        }
+    </script>
+</body>
+</html>

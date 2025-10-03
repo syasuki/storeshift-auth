@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Shift - メール確認</title>
+    <link rel="stylesheet" href="/styles/auth.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">✉️</div>
+        <h1>メールアドレス確認</h1>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p class="subtitle">メールアドレスを確認中...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- 動的コンテンツ -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { handleSignupConfirmation } from '/scripts/auth-handler.js';
+
+        // ページロード時に処理を開始
+        document.addEventListener('DOMContentLoaded', () => {
+            handleSignupConfirmation();
+        });
+    </script>
+</body>
+</html>
