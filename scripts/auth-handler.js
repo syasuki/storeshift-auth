@@ -28,7 +28,7 @@ function hideLoading() {
 }
 
 // メッセージ表示
-function showMessage(type, title, message, showButton = false) {
+function showMessage(type, title, message) {
     hideLoading();
     const content = document.getElementById('content');
 
@@ -45,11 +45,6 @@ function showMessage(type, title, message, showButton = false) {
                 <h2 style="margin-bottom: 16px;">${title}</h2>
                 <p style="font-size: 14px; line-height: 1.6;">${message}</p>
             </div>
-            ${showButton ? `
-                <button class="btn btn-primary" onclick="window.location.href='storeshift://auth-callback'">
-                    アプリを開く
-                </button>
-            ` : ''}
         </div>
     `;
 }
@@ -167,37 +162,10 @@ export async function handleSignupConfirmation() {
 
 // メール確認成功時の表示
 function showSuccessWithAppLink() {
-    hideLoading();
-    const content = document.getElementById('content');
-
-    content.innerHTML = `
-        <div class="message">
-            <div class="message-card success-message">
-                <span class="icon-large">✅</span>
-                <h2 style="margin-bottom: 16px;">メール確認完了！</h2>
-                <p style="font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-                    メールアドレスの確認が完了しました。<br>
-                    Store Shiftアプリに戻ってログインしてください。
-                </p>
-            </div>
-
-            <button class="btn btn-primary" onclick="window.location.href='storeshift://auth-success?type=signup'">
-                アプリを開く
-            </button>
-
-            <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 12px;">
-                <p style="font-size: 12px; color: #666; text-align: center;">
-                    アプリが開かない場合は、Store Shiftアプリを<br>
-                    手動で開いてログインしてください。
-                </p>
-            </div>
-        </div>
-    `;
-
-    // 3秒後に自動的にアプリを開こうとする
-    setTimeout(() => {
-        window.location.href = 'storeshift://auth-success?type=signup';
-    }, 3000);
+    showMessage('success',
+        'メール確認完了！',
+        'メールアドレスの確認が完了しました。Store Shiftアプリに戻ってログインしてください。'
+    );
 }
 
 // 旧メール確認処理（互換性のため残す）
@@ -315,8 +283,7 @@ function showPasswordResetForm() {
 
                 showMessage('success',
                     'パスワード更新完了',
-                    'パスワードが正常に更新されました。アプリに戻ってログインしてください。',
-                    true
+                    'パスワードが正常に更新されました。アプリに戻ってログインしてください。'
                 );
             } catch (error) {
                 console.error('Password reset error:', error);
@@ -408,8 +375,7 @@ export async function handleInvite() {
 
                 showMessage('success',
                     'アカウント作成完了',
-                    'アカウントが正常に作成されました。アプリに戻ってログインしてください。',
-                    true
+                    'アカウントが正常に作成されました。アプリに戻ってログインしてください。'
                 );
             } catch (error) {
                 console.error('Invite error:', error);
